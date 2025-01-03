@@ -69,4 +69,14 @@ Set-Alias -Name pull -Value $PSScriptRoot\git_pull.ps1 -Scope Global
 
 Set-Alias -Name b_shader -Value $PSScriptRoot\build_shaders.ps1 -Scope Global
 
+# Check if the "bin" folder exists in the current directory
+if (-Not (Test-Path -Path $BIN_DIR_PATH)) {
+    # Create the "bin" folder if it does not exist
+    New-Item -Path $BIN_DIR_PATH -ItemType Directory | Out-Null
+}
+if (-Not (Test-Path -Path $DATA_DIR_PATH)) {
+    # Create the "assets" folder if it does not exist
+    New-Item -Path $DATA_DIR_PATH -ItemType Directory | Out-Null
+}
+
 Write-Yellow "All Command Aliases are set. You can use build/rebuild/msvc/clean/goto/run/push/pull ..."

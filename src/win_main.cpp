@@ -12,11 +12,53 @@ struct win32_window_context
     HWND Handle;
     HBRUSH ClearColor;
 };
+
+struct platform_input_button_state
+{
+    i32 ButtonTransitionsPerFrame;
+    b32 IsDown;
+};
+
+enum platform_input_mouse_button
+{
+    MouseButton_Left,
+    MouseButton_Right,
+    MouseButton_Middle,
+    MouseButton_Extended0,
+    MouseButton_Extended1,
+
+    MouseButton_Count
+};
+
+struct platform_input_state
+{
+    platform_input_button_state MouseButtons[MouseButton_Count];
+    f32 MouseXPos, MouseYPos;
+
+    union
+    {
+        platform_input_button_state KeyboardButtons[9];
+
+        struct
+        {
+            platform_input_button_state Keyboard_W;
+            platform_input_button_state Keyboard_A;
+            platform_input_button_state Keyboard_S;
+            platform_input_button_state Keyboard_D;
+            platform_input_button_state Keyboard_UpArrow;
+            platform_input_button_state Keyboard_DownArrow;
+            platform_input_button_state Keyboard_LeftArrow;
+            platform_input_button_state Keyboard_RightArrow;
+            platform_input_button_state Keyboard_Enter;
+        };
+    };
+};
+
 static win32_window_context GlobalWin32WindowContext = {};
 static WINDOWPLACEMENT GlobalWin32WindowPosition = { sizeof(GlobalWin32WindowPosition) };
 static b8 Win32GlobalRunning = false;
 
-RECT
+static RECT
 Win32GetWindowRect(HWND WindowHandle)
 {
     RECT ClientRect;
@@ -25,7 +67,7 @@ Win32GetWindowRect(HWND WindowHandle)
     return ClientRect;
 }
 
-void
+static void
 Win32ToggleFullscreen(HWND Window)
 {
     // NOTE: This follows Raymond Chens prescription for fullscreen toggling.
@@ -53,48 +95,7 @@ Win32ToggleFullscreen(HWND Window)
     }
 }
 
-struct platform_input_button_state
-{
-    i32 ButtonTransitionsPerFrame;
-    b32 IsDown;
-};
-
-enum platform_input_mouse_button
-{
-    MouseButton_Left,
-    MouseButton_Right,
-    MouseButton_Middle,
-    MouseButton_Extended0,
-    MouseButton_Extended1,
-
-    MouseButton_Count,
-};
-
-struct platform_input_state
-{
-    platform_input_button_state MouseButtons[MouseButton_Count];
-    f32 MouseXPos, MouseYPos;
-
-    union
-    {
-        platform_input_button_state KeyboardButtons[9];
-
-        struct
-        {
-            platform_input_button_state Keyboard_W;
-            platform_input_button_state Keyboard_A;
-            platform_input_button_state Keyboard_S;
-            platform_input_button_state Keyboard_D;
-            platform_input_button_state Keyboard_UpArrow;
-            platform_input_button_state Keyboard_DownArrow;
-            platform_input_button_state Keyboard_LeftArrow;
-            platform_input_button_state Keyboard_RightArrow;
-            platform_input_button_state Keyboard_Enter;
-        };
-    };
-};
-
-LRESULT CALLBACK
+static LRESULT CALLBACK
 Win32WindowCallback(HWND WindowHandle, UINT Message, WPARAM WParam, LPARAM LParam)
 {
     LRESULT Result = 0;
@@ -146,7 +147,7 @@ Win32WindowCallback(HWND WindowHandle, UINT Message, WPARAM WParam, LPARAM LPara
     return Result;
 }
 
-void
+static void
 Win32UpdateInputButtonState(platform_input_button_state *InputButtonState, b32 IsCurrentlyDown)
 {
     if(InputButtonState->IsDown != IsCurrentlyDown)
@@ -156,7 +157,7 @@ Win32UpdateInputButtonState(platform_input_button_state *InputButtonState, b32 I
     }
 }
 
-b32
+static b32
 Win32InputKeyPressed(platform_input_button_state InputState)
 {
     b32 Result = ((InputState.ButtonTransitionsPerFrame > 1) ||
@@ -165,7 +166,7 @@ Win32InputKeyPressed(platform_input_button_state InputState)
     return Result;
 }
 
-void
+static void
 Win32ProcessWindowsMessageQueue(HWND WindowHandle, platform_input_state *Input)
 {
     MSG Message;
@@ -273,10 +274,9 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int CmdSh
                                        hInstance,
                                        NULL);
     // SetLayeredWindowAttributes(WindowHandle, RGB(0, 0, 0), 128, LWA_ALPHA);
-
     GlobalWin32WindowContext.Handle = WindowHandle;
     GlobalWin32WindowContext.ClearColor = CreateSolidBrush(RGB(48, 10, 36));
-    
+
     ShowWindow(WindowHandle, CmdShow);
 
     platform_input_state InputState[2] = {};
@@ -287,7 +287,7 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int CmdSh
     while(Win32GlobalRunning)
     {
         // MOUSE
-        u32 MouseButtonsKeyCodes[5] =
+        i32 MouseButtonsKeyCodes[5] =
         {
             SU_LEFTMOUSEBUTTON,
             SU_RIGHTMOUSEBUTTON,
@@ -300,8 +300,8 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int CmdSh
         POINT ClientRelativeMousePos;
         GetCursorPos(&ClientRelativeMousePos);
         ScreenToClient(WindowHandle, &ClientRelativeMousePos);
-        NewInputState->MouseXPos = ClientRelativeMousePos.x;
-        NewInputState->MouseYPos = ClientRelativeMousePos.y;
+        NewInputState->MouseXPos = (f32)ClientRelativeMousePos.x;
+        NewInputState->MouseYPos = (f32)ClientRelativeMousePos.y;
 
         for(i32 ButtonIndex = 0;
             ButtonIndex < 5;
@@ -384,7 +384,6 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int CmdSh
             WIN32_LOG_OUTPUT("Extended Mouse Button 2 was pressed at [%f, %f]!\n",
                              NewInputState->MouseXPos, NewInputState->MouseYPos);
         }
-
         platform_input_state *Temp = NewInputState;
         NewInputState = OldInputState;
         OldInputState = Temp;

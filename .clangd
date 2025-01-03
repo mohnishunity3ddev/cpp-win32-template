@@ -1,0 +1,17 @@
+CompileFlags:
+  Add: [
+         -std=c++11,
+
+         -D_DEBUG,
+
+         -Wall,
+         -Wextra,
+         -Wpedantic,
+         -Weverything,
+
+         -Wno-gnu-anonymous-struct,
+         -Wno-nested-anon-types,
+         -Wno-string-conversion,
+         -Wno-extra-semi-stmt,
+         -Wno-old-style-cast,
+       ]
